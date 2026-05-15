@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minuto Cero — Panel de Tareas</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F6F3;
+    --surface: #FFFFFF;
+    --surface2: #F0EEE9;
+    --border: #E2DED6;
+    --text: #1A1916;
+    --text2: #6B6860;
+    --text3: #A8A49E;
+    --accent: #1A1916;
+    --red: #C84B3A;
+    --red-bg: #FDF1EF;
+    --amber: #C17D20;
+    --amber-bg: #FDF6ED;
+    --green: #3A7A52;
+    --green-bg: #EFF7F3;
+    --gray-bg: #F0EEE9;
+    --font: 'DM Sans', sans-serif;
+    --mono: 'DM Mono', monospace;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  .shell { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+  /* HEADER */
+  .header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 2rem; gap: 1rem; flex-wrap: wrap; }
+  .header-left { display: flex; flex-direction: column; gap: 6px; }
+  .logo { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .logo span { font-weight: 400; color: var(--text2); font-size: 15px; margin-left: 6px; }
+  .sync-row { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+  .dot.loading { background: var(--amber); animation: blink 1s infinite; }
+  .dot.error { background: var(--red); }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+  .tabs { display: flex; background: var(--surface2); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+  .tab { padding: 6px 14px; border-radius: 5px; font-size: 13px; cursor: pointer; color: var(--text2); border: none; background: transparent; font-family: var(--font); transition: all 0.15s; }
+  .tab.active { background: var(--surface); color: var(--text); font-weight: 500; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .sync-btn { font-size: 12px; color: var(--text3); background: transparent; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 5px 10px; cursor: pointer; font-family: var(--mono); }
+  .sync-btn:hover { color: var(--text2); border-color: var(--text3); }
+
+  /* METRICS */
+  .metrics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 1.5rem; }
+  @media(max-width:600px){ .metrics { grid-template-columns: repeat(3,1fr); } }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
+  .metric-label { font-size: 11px; color: var(--text3); font-family: var(--mono); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  .metric-value { font-size: 26px; font-weight: 600; letter-spacing: -0.03em; color: var(--text); }
+  .metric-value.red { color: var(--red); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.green { color: var(--green); }
+
+  /* FILTERS */
+  .filters { display: flex; gap: 6px; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter { padding: 5px 12px; border-radius: 20px; font-size: 12px; cursor: pointer; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-family: var(--font); transition: all 0.12s; }
+  .filter.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* TASK LIST */
+  .task-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 1.5rem; }
+  .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; transition: border-color 0.12s; }
+  .task-card:hover { border-color: var(--text3); }
+  .task-card.urgente { border-left: 3px solid var(--red); }
+  .task-card.en-progreso { border-left: 3px solid var(--amber); }
+  .task-card.pendiente { border-left: 3px solid var(--border); }
+  .task-card.listo { border-left: 3px solid var(--green); opacity: 0.7; }
+  .task-left { flex: 1; min-width: 0; }
+  .task-title { font-size: 14px; font-weight: 500; margin-bottom: 5px; }
+  .task-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 20px; font-family: var(--mono); }
+  .badge.urgente { background: var(--red-bg); color: var(--red); }
+  .badge.en-progreso { background: var(--amber-bg); color: var(--amber); }
+  .badge.pendiente { background: var(--gray-bg); color: var(--text2); }
+  .badge.listo { background: var(--green-bg); color: var(--green); }
+  .meta-text { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .task-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
+  .avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; font-family: var(--mono); }
+  .av-BL { background: #DDEEFF; color: #1A5FA8; }
+  .av-NI { background: #EAE8FF; color: #5040B8; }
+  .av-TO { background: #FFE8F0; color: #A8285A; }
+  .av-CL { background: #D8F5E8; color: #206640; }
+  .av-TH { background: #FFF0D8; color: #8A5010; }
+  .av-BE { background: #FFE8E0; color: #A03820; }
+  .deadline { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .deadline.soon { color: var(--red); font-weight: 500; }
+  .status-sel { font-size: 11px; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 3px 6px; background: var(--surface2); color: var(--text); cursor: pointer; font-family: var(--mono); }
+
+  /* ADD BUTTON */
+  .add-btn { width: 100%; padding: 12px; border: 1.5px dashed var(--border); border-radius: var(--radius); background: transparent; color: var(--text3); font-size: 13px; cursor: pointer; font-family: var(--font); transition: all 0.12s; }
+  .add-btn:hover { border-color: var(--text3); color: var(--text2); background: var(--surface); }
+
+  /* EMPTY STATE */
+  .empty { text-align: center; padding: 3rem; color: var(--text3); font-size: 14px; }
+
+  /* GERENCIAL */
+  .ger-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 6px; }
+  .ger-name { flex: 1; font-size: 13px; font-weight: 500; }
+  .ger-count { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+
+  /* PERSONA VIEW */
+  .persona-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 10px; }
+  .persona-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .persona-info { flex: 1; }
+  .persona-name { font-size: 14px; font-weight: 600; }
+  .persona-role { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .persona-count { font-size: 12px; color: var(--text3); font-family: var(--mono); }
+  .mini-task { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 5px; }
+  .mini-left { flex: 1; }
+  .mini-title { font-size: 13px; font-weight: 500; }
+  .mini-sub { font-size: 11px; color: var(--text3); font-family: var(--mono); }
+  .mini-right { display: flex; gap: 8px; align-items: center; }
+
+  /* SECTION TITLE */
+  .section-title { font-size: 11px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(26,25,22,0.45); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 1rem; }
+  .modal { background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border); padding: 1.5rem; width: 100%; max-width: 460px; }
+  .modal-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; letter-spacing: -0.01em; }
+  .form-group { margin-bottom: 14px; }
+  .form-label { font-size: 11px; font-family: var(--mono); color: var(--text3); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 5px; }
+  .form-input { width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; font-family: var(--font); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.12s; }
+  .form-input:focus { border-color: var(--text3); }
+  select.form-input { cursor: pointer; }
+  textarea.form-input { height: 72px; resize: none; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; }
+  .btn { padding: 8px 18px; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; font-family: var(--font); font-weight: 500; border: 1px solid var(--border); }
+  .btn-secondary { background: transparent; color: var(--text2); }
+  .btn-primary { background: var(--text); color: #fff; border-color: var(--text); }
+  .btn-primary:hover { background: #333; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">Minuto Cero <span>panel de tareas</span></div>
+      <div class="sync-row">
+        <div class="dot loading" id="dot"></div>
+        <span id="sync-text">Conectando...</span>
+      </div>
+    </div>
+    <div class="header-right">
+      <div class="tabs">
+        <button class="tab active" onclick="switchView('equipo')">Equipo</button>
+        <button class="tab" onclick="switchView('gerencial')">Gerencial</button>
+        <button class="tab" onclick="switchView('personas')">Por persona</button>
+      </div>
+      <button class="sync-btn" onclick="loadTasks()">↺ Sincronizar</button>
+    </div>
+  </div>
+
+  <!-- VISTA EQUIPO -->
+  <div id="view-equipo">
+    <div class="metrics" id="metrics-equipo"></div>
+    <div class="filters" id="filters">
+      <button class="filter active" onclick="setFilter('todas',this)">Todas</button>
+      <button class="filter" onclick="setFilter('urgente',this)">Urgente</button>
+      <button class="filter" onclick="setFilter('en-progreso',this)">En progreso</button>
+      <button class="filter" onclick="setFilter('pendiente',this)">Pendiente</button>
+      <button class="filter" onclick="setFilter('listo',this)">Listo</button>
+    </div>
+    <div class="task-list" id="task-list"></div>
+    <button class="add-btn" onclick="openModal()">+ Agregar tarea</button>
+  </div>
+
+  <!-- VISTA GERENCIAL -->
+  <div id="view-gerencial" style="display:none">
+    <div class="metrics" id="metrics-gerencial"></div>
+    <div style="margin-bottom:1.5rem">
+      <div class="section-title">resumen por persona</div>
+      <div id="resumen-personas"></div>
+    </div>
+    <div class="section-title">requieren atención inmediata</div>
+    <div class="task-list" id="task-list-gerencial"></div>
+  </div>
+
+  <!-- VISTA PERSONAS -->
+  <div id="view-personas" style="display:none">
+    <div class="section-title">carga por persona</div>
+    <div id="personas-list"></div>
+  </div>
+
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" style="display:none" onclick="closeOverlay(event)">
+  <div class="modal" onclick="event.stopPropagation()">
+    <div class="modal-title">Nueva tarea</div>
+    <div class="form-group">
+      <label class="form-label">Nombre de la tarea</label>
+      <input class="form-input" type="text" id="f-titulo" placeholder="Ej: Confirmar cancha Soccer Kids">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Evento / área</label>
+      <input class="form-input" type="text" id="f-evento" placeholder="Ej: Soccer Kids, Liga Consultoras">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Responsable</label>
+        <select class="form-input" id="f-responsable">
+          <option value="">Sin asignar</option>
+          <option value="BL">Bladimir</option>
+          <option value="NI">Nicolás</option>
+          <option value="TO">Tomás</option>
+          <option value="CL">Clemente</option>
+          <option value="TH">Thomas</option>
+          <option value="BE">Benjamín</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select class="form-input" id="f-estado">
+          <option value="pendiente">Pendiente</option>
+          <option value="en-progreso">En progreso</option>
+          <option value="urgente">Urgente</option>
+          <option value="listo">Listo</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Fecha de creación</label>
+        <input class="form-input" type="date" id="f-creacion">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Fecha límite</label>
+        <input class="form-input" type="date" id="f-limite">
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notas</label>
+      <textarea class="form-input" id="f-notas" placeholder="Detalles, dependencias, contexto..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="document.getElementById('overlay').style.display='none'">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveTask()">Guardar tarea</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'https://script.google.com/macros/s/AKfycbxbZW4xFxz36x237l_G7kpZecdrVzU2OyRmIgbopEVUwXmS0KtVu14ukUYJlOTZXRoK/exec';
+
+const PERSONAS = {
+  BL: { nombre:'Bladimir', rol:'Líder operativo', cls:'av-BL' },
+  NI: { nombre:'Nicolás', rol:'Producción', cls:'av-NI' },
+  TO: { nombre:'Tomás', rol:'Redes sociales', cls:'av-TO' },
+  CL: { nombre:'Clemente', rol:'Part-time', cls:'av-CL' },
+  TH: { nombre:'Thomas', rol:'Part-time', cls:'av-TH' },
+  BE: { nombre:'Benjamín', rol:'Ventas / sponsors', cls:'av-BE' }
+};
+
+let tasks = [];
+let currentFilter = 'todas';
+let currentView = 'equipo';
+let nextId = 1;
+
+function today() { return new Date().toISOString().split('T')[0]; }
+
+function diasR(fecha) {
+  if (!fecha) return 999;
+  const h = new Date(); h.setHours(0,0,0,0);
+  const f = new Date(fecha); f.setHours(0,0,0,0);
+  return Math.ceil((f - h) / 86400000);
+}
+
+function setSync(state, text) {
+  document.getElementById('dot').className = 'dot' + (state==='loading'?' loading':state==='error'?' error':'');
+  document.getElementById('sync-text').textContent = text;
+}
+
+function jsonp(url) {
+  return new Promise((resolve, reject) => {
+    const cb = '__cb_' + Date.now();
+    const s = document.createElement('script');
+    s.src = url + '&callback=' + cb;
+    window[cb] = d => { delete window[cb]; s.remove(); resolve(d); };
+    s.onerror = () => { delete window[cb]; s.remove(); reject(); };
+    document.head.appendChild(s);
+    setTimeout(() => { if(window[cb]){ delete window[cb]; s.remove(); reject(); } }, 8000);
+  });
+}
+
+async function loadTasks() {
+  setSync('loading', 'Sincronizando...');
+  try {
+    const data = await jsonp(API + '?action=getTasks');
+    if (Array.isArray(data)) {
+      tasks = data.filter(t => t.id).map(t => ({...t, id: String(t.id)}));
+      nextId = tasks.length ? Math.max(...tasks.map(t=>parseInt(t.id)||0)) + 1 : 1;
+      setSync('ok', 'Sincronizado — ' + tasks.length + ' tarea' + (tasks.length!==1?'s':''));
+    } else {
+      setSync('error', 'Error al leer datos');
+    }
+  } catch(e) {
+    setSync('error', 'Sin conexión con Google Sheets');
+  }
+  renderAll();
+}
+
+async function postTask(action, task) {
+  try {
+    const r = await fetch(API, { method:'POST', body: JSON.stringify({action, task}) });
+    return r.json();
+  } catch(e) { return {error: true}; }
+}
+
+function badge(estado) {
+  const l = { urgente:'Urgente','en-progreso':'En progreso',pendiente:'Pendiente',listo:'Listo' };
+  return `<span class="badge ${estado}">${l[estado]||estado}</span>`;
+}
+
+function avatar(key) {
+  if (!key || !PERSONAS[key]) return '';
+  return `<div class="avatar ${PERSONAS[key].cls}" title="${PERSONAS[key].nombre}">${key}</div>`;
+}
+
+function dlHtml(fecha) {
+  if (!fecha) return '';
+  const d = diasR(fecha);
+  const cls = d <= 3 ? 'soon' : '';
+  const txt = d < 0 ? 'Vencida' : d === 0 ? 'Hoy' : d + 'd';
+  return `<span class="deadline ${cls}">${txt}</span>`;
+}
+
+async function changeStatus(id, val) {
+  const t = tasks.find(t => t.id === id);
+  if (!t) return;
+  t.estado = val;
+  renderAll();
+  setSync('loading', 'Guardando...');
+  const r = await postTask('updateTask', t);
+  setSync(r.ok ? 'ok' : 'error', r.ok ? 'Guardado ✓' : 'Error al guardar');
+}
+
+function taskCard(t, editable) {
+  const sel = editable ? `
+    <select class="status-sel" onchange="changeStatus('${t.id}',this.value)">
+      <option value="pendiente" ${t.estado==='pendiente'?'selected':''}>Pendiente</option>
+      <option value="en-progreso" ${t.estado==='en-progreso'?'selected':''}>En progreso</option>
+      <option value="urgente" ${t.estado==='urgente'?'selected':''}>Urgente</option>
+      <option value="listo" ${t.estado==='listo'?'selected':''}>Listo</option>
+    </select>` : '';
+  return `
+    <div class="task-card ${t.estado}">
+      <div class="task-left">
+        <div class="task-title">${t.titulo}</div>
+        <div class="task-meta">
+          ${badge(t.estado)}
+          ${t.evento ? `<span class="meta-text">${t.evento}</span>` : ''}
+          ${t.notas ? `<span class="meta-text">${t.notas}</span>` : ''}
+        </div>
+      </div>
+      <div class="task-right">
+        ${avatar(t.responsable)}
+        ${dlHtml(t.fecha_limite)}
+        ${sel}
+      </div>
+    </div>`;
+}
+
+function renderEquipo() {
+  const f = currentFilter==='todas' ? tasks : tasks.filter(t=>t.estado===currentFilter);
+  document.getElementById('task-list').innerHTML = f.length ? f.map(t=>taskCard(t,true)).join('') : '<div class="empty">No hay tareas en esta categoría</div>';
+  const u=tasks.filter(t=>t.estado==='urgente').length;
+  const ep=tasks.filter(t=>t.estado==='en-progreso').length;
+  const p=tasks.filter(t=>t.estado==='pendiente').length;
+  const l=tasks.filter(t=>t.estado==='listo').length;
+  document.getElementById('metrics-equipo').innerHTML = `
+    <div class="metric"><div class="metric-label">Total</div><div class="metric-value">${tasks.length}</div></div>
+    <div class="metric"><div class="metric-label">Urgentes</div><div class="metric-value red">${u}</div></div>
+    <div class="metric"><div class="metric-label">Progreso</div><div class="metric-value amber">${ep}</div></div>
+    <div class="metric"><div class="metric-label">Pendientes</div><div class="metric-value">${p}</div></div>
+    <div class="metric"><div class="metric-label">Listas</div><div class="metric-value green">${l}</div></div>
+  `;
+}
+
+function renderGerencial() {
+  const criticas = tasks.filter(t=>t.estado==='urgente'||diasR(t.fecha_limite)<=3);
+  document.getElementById('task-list-gerencial').innerHTML = criticas.length ? criticas.map(t=>taskCard(t,false)).join('') : '<div class="empty">Sin tareas críticas — todo bajo control</div>';
+  const comp=tasks.filter(t=>t.estado==='listo').length;
+  const pct=tasks.length?Math.round(comp/tasks.length*100):0;
+  const sk=diasR('2026-05-31');
+  document.getElementById('metrics-gerencial').innerHTML = `
+    <div class="metric"><div class="metric-label">Avance</div><div class="metric-value">${pct}%</div></div>
+    <div class="metric"><div class="metric-label">Críticas</div><div class="metric-value red">${criticas.length}</div></div>
+    <div class="metric"><div class="metric-label">Tareas</div><div class="metric-value">${tasks.length}</div></div>
+    <div class="metric"><div class="metric-label">Días Soccer Kids</div><div class="metric-value amber">${sk}</div></div>
+  `;
+  const res = Object.keys(PERSONAS).map(k=>({
+    key:k, nombre:PERSONAS[k].nombre,
+    total:tasks.filter(t=>t.responsable===k).length,
+    urg:tasks.filter(t=>t.responsable===k&&t.estado==='urgente').length
+  })).filter(p=>p.total>0);
+  document.getElementById('resumen-personas').innerHTML = res.map(p=>`
+    <div class="ger-row">
+      ${avatar(p.key)}
+      <div class="ger-name">${p.nombre}</div>
+      <div class="ger-count">${p.total} tarea${p.total!==1?'s':''}</div>
+      ${p.urg>0?`<span class="badge urgente">${p.urg} urgente${p.urg!==1?'s':''}</span>`:`<span class="badge listo">Al día</span>`}
+    </div>`).join('');
+}
+
+function renderPersonas() {
+  document.getElementById('personas-list').innerHTML = Object.keys(PERSONAS).map(k=>{
+    const p=PERSONAS[k];
+    const mt=tasks.filter(t=>t.responsable===k);
+    if(!mt.length) return '';
+    return `
+      <div class="persona-block">
+        <div class="persona-head">
+          <div class="avatar ${p.cls}">${k}</div>
+          <div class="persona-info">
+            <div class="persona-name">${p.nombre}</div>
+            <div class="persona-role">${p.rol}</div>
+          </div>
+          <div class="persona-count">${mt.length} tarea${mt.length!==1?'s':''}</div>
+        </div>
+        ${mt.map(t=>`
+          <div class="mini-task">
+            <div class="mini-left">
+              <div class="mini-title">${t.titulo}</div>
+              <div class="mini-sub">${t.evento||''}</div>
+            </div>
+            <div class="mini-right">${badge(t.estado)}${dlHtml(t.fecha_limite)}</div>
+          </div>`).join('')}
+      </div>`;
+  }).join('');
+}
+
+function renderAll() {
+  if(currentView==='equipo') renderEquipo();
+  if(currentView==='gerencial') renderGerencial();
+  if(currentView==='personas') renderPersonas();
+}
+
+function switchView(v) {
+  currentView=v;
+  ['equipo','gerencial','personas'].forEach(id=>{
+    document.getElementById('view-'+id).style.display=id===v?'block':'none';
+  });
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active',['equipo','gerencial','personas'][i]===v);
+  });
+  renderAll();
+}
+
+function setFilter(f,btn) {
+  currentFilter=f;
+  document.querySelectorAll('.filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderEquipo();
+}
+
+function openModal() {
+  document.getElementById('overlay').style.display='flex';
+  document.getElementById('f-creacion').value=today();
+  document.getElementById('f-limite').value=today();
+}
+
+function closeOverlay(e) {
+  if(e.target===document.getElementById('overlay')) document.getElementById('overlay').style.display='none';
+}
+
+async function saveTask() {
+  const titulo=document.getElementById('f-titulo').value.trim();
+  if(!titulo) return;
+  const task={
+    id: String(nextId++),
+    titulo,
+    evento: document.getElementById('f-evento').value||'MC General',
+    responsable: document.getElementById('f-responsable').value||'',
+    estado: document.getElementById('f-estado').value,
+    fecha_creacion: document.getElementById('f-creacion').value,
+    fecha_limite: document.getElementById('f-limite').value,
+    notas: document.getElementById('f-notas').value
+  };
+  tasks.push(task);
+  document.getElementById('overlay').style.display='none';
+  ['f-titulo','f-evento','f-notas'].forEach(id=>document.getElementById(id).value='');
+  renderAll();
+  setSync('loading','Guardando...');
+  const r = await postTask('saveTask', task);
+  setSync(r.ok?'ok':'error', r.ok?'Guardado ✓':'Error al guardar');
+}
+
+loadTasks();
+</script>
+</body>
+</html>
